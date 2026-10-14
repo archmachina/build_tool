@@ -8,6 +8,7 @@ import logging
 import re
 import requests
 import textwrap
+import json
 
 # Exceptions
 class ArgumentException(Exception):
@@ -520,4 +521,46 @@ class Util:
                 )
 
         return response
+
+    @classmethod
+    def github_release(cls, tag_name, *, name, prerelease, github_token, repo):
+
+        val_arg(isinstance(tag_name, str), "Invalid tag name parameter. Must be str")
+        val_arg(isinstance(name, str), "Invalid name parameter. Must be str")
+        val_arg(isinstance(prerelease, bool), "Invalid prerelease parameter. Must be bool")
+        val_arg(isinstance(github_token, str), "Invalid github token parameter. Must be str")
+        val_arg(isinstance(repo, str), "Invalid repo parameter. Must be str")
+
+        val_arg(tag_name != "", "Empty tag name supplied")
+        val_arg(name != "", "Empty name supplied")
+        val_arg(github_token != "", "Empty github token")
+        val_arg(repo != "", "Empty repo parameter")
+
+        # GitHub headers
+        headers = {
+            "Accept": "application/vnd.github.v3+json",
+            "Authorization": f"token {github_token}",
+            "Content-Type": "application/json",
+            "X-GitHub-Api-Version": "2022-11-28"
+        }
+
+        # Post body
+        body = json.dumps({
+            "tag_name": tag_name,
+            "name": name,
+            "draft": False,
+            "prerelease": prerelease,
+            "generate_release_notes": True
+        })
+
+        args = {
+            "url": f"https://api.github.com/repos/{repo}/releases",
+            "method": "post",
+            "body": body,
+            "headers": headers,
+            "status_check": [201]
+        }
+
+        logger.debug("Url args: %s", args)
+        Util.url_request(**args)
 
