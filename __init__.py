@@ -1,5 +1,6 @@
 
 import argparse
+import inspect
 import os
 import shlex
 import subprocess
@@ -192,8 +193,13 @@ def run_action():
         if args.action not in actions:
             raise ArgumentException(f"Unknown action {args.action}")
 
-        # Run the action, with the optional action argument
-        actions[args.action](" ".join(args.action_arg))
+        # Run the action, passing the action argument only if the
+        # action function accepts one
+        target = actions[args.action]
+        if len(inspect.signature(target).parameters) > 0:
+            target(" ".join(args.action_arg))
+        else:
+            target()
 
         sys.exit(0)
 
@@ -439,6 +445,37 @@ class BuildSession:
         # No matches found
         if required:
             raise VersionParseError("No semver matches found")
+
+
+class TestingSession:
+    def __init__(self, testing_commands=None):
+
+        # Validate incoming arguments
+        val_arg(isinstance(testing_commands, (list, type(None))), "Invalid testing commands argument. Must be list or None")
+
+        self.testing_commands = testing_commands if testing_commands else []
+
+    def run(self):
+
+        result = [bash(x, ignore_rc=True) for x in self.testing_commands]
+
+        if any([x.returncode for x in result]):
+            Util.fail("Some testing commands failed")
+
+class LintingSession:
+    def __init__(self, linting_commands=None):
+
+        # Validate incoming arguments
+        val_arg(isinstance(linting_commands, (list, type(None))), "Invalid linting commands argument. Must be list or None")
+
+        self.linting_commands = linting_commands if linting_commands else []
+
+    def run(self):
+
+        result = [bash(x, ignore_rc=True) for x in self.linting_commands]
+
+        if any([x.returncode for x in result]):
+            Util.fail("Some linting commands failed")
 
 
 class Util:
