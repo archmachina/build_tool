@@ -211,10 +211,19 @@ def run_action():
 
 # Build helpers
 class ContainerSession:
-    def __init__(self, container_image):
+    def __init__(self, container_image, docker_file, container_dir):
+
+        # Validate incoming arguments
+        val_arg(isinstance(container_image, str), "Invalid container_image argument. Must be str")
+        val_arg(container_image != "", "Empty container_image argument")
+        val_arg(isinstance(docker_file, str), "Invalid docker_file argument. Must be str")
+        val_arg(docker_file != "", "Empty docker_file argument")
+        val_arg(isinstance(container_dir, str), "Invalid container_dir argument. Must be str")
+        val_arg(container_dir != "", "Empty container_dir argument")
+
         self.engine = "docker"
-        self.docker_file = "src/Dockerfile"
-        self.container_dir = "src"
+        self.docker_file = docker_file
+        self.container_dir = container_dir
         self.container_image = container_image
         self.build_args = []
         self.tags = []
