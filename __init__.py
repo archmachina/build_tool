@@ -362,6 +362,56 @@ class DeploySession:
         logger.debug("Url args: %s", args)
         Util.url_request(**args)
 
+    def promote_github(self, env_name, *, repo, promote_token):
+
+        val_arg(isinstance(env_name, str), "Invalid env name parameter. Must be str")
+        val_arg(isinstance(repo, str), "Invalid repo parameter. Must be str")
+        val_arg(isinstance(promote_token, str), "Invalid promote token parameter. Must be str")
+
+        val_arg(env_name != "", "Empty env name supplied")
+        val_arg(repo != "", "Empty repo parameter")
+        val_arg(promote_token != "", "Empty promote token")
+
+        # Fetch all for git repo. Best effort
+        bash("git fetch --all", ignore_rc=True)
+
+        # Get environment
+        env = self.get_env(env_name)
+        next_env = env.next_env
+
+        # Stop here if we have no next environment
+        if next_env == "":
+            logger.info("No next environment to promote to")
+            return
+
+        # GitHub headers
+        headers = {
+            "Accept": "application/vnd.github.v3+json",
+            "Authorization": f"token {promote_token}",
+            "Content-Type": "application/json",
+            "X-GitHub-Api-Version": "2022-11-28"
+        }
+
+        # Post body
+        body = json.dumps({
+            "title": f"Promote {env.name} to {next_env}",
+            "base": next_env,
+            "head": env.name,
+            "body": f"Promote {env.name} to {next_env}"
+        })
+
+        args = {
+            "url": f"https://api.github.com/repos/{repo}/pulls",
+            "method": "post",
+            "body": body,
+            "headers": headers,
+            # Create with an existing PR generates a 422 response
+            "status_check": [201, 422]
+        }
+
+        logger.debug("Url args: %s", args)
+        Util.url_request(**args)
+
 
 class BuildSession:
     def __init__(self, version_sources=None):
